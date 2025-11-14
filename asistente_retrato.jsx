@@ -1,0 +1,544 @@
+import React, { useState, useMemo } from 'react';
+
+// --- Constantes de la Aplicación ---
+
+// AHORA 10 PASOS: Cuestionario más profesional y ampliado
+const STEPS = [
+  { id: 'genero', title: 'Expresión de Género' },
+  { id: 'etnia', title: 'Etnia y Rasgos' },
+  { id: 'visagismo', title: 'Visagismo - Forma de Rostro' },
+  { id: 'colorimetria', title: 'Colorimetría - Estación' },
+  { id: 'tipoCabello', title: 'Textura y Tipo de Cabello' }, // NUEVO PASO
+  { id: 'tecnicaPeinado', title: 'Técnica de Peinado' }, // 'peinado' renombrado
+];
+
+// Opciones del cuestionario con explicaciones profesionales (Actualizadas y ampliadas)
+const QUESTIONNAIRE_OPTIONS = {
+  genero: [
+    {
+      value: 'Expresión Femenina',
+      desc: 'Rasgos asociados tradicionalmente a la feminidad (ej. pómulos suaves, línea de mandíbula menos marcada).',
+    },
+    {
+      value: 'Expresión Masculina',
+      desc: 'Rasgos asociados tradicionalmente a la masculinidad (ej. mandíbula más ancha, cejas más prominentes).',
+    },
+    {
+      value: 'Expresión Andrógina',
+      desc: 'Rasgos que combinan elementos o se sitúan en un punto intermedio, no claramente definidos como masculinos o femeninos.',
+    },
+  ],
+  etnia: [
+    {
+      value: 'Rasgos Caucásicos (Europeos)',
+      desc: 'Variedad de tonos de piel claros a medios, texturas de cabello lisas u onduladas.',
+    },
+    {
+      value: 'Rasgos Asiáticos Orientales (Ej. China, Japón, Corea)',
+      desc: 'Ojos característicos, piel con subtonos amarillos o neutros, cabello liso y oscuro.',
+    },
+    {
+      value: 'Rasgos Surasiáticos (Ej. India, Pakistán)',
+      desc: 'Tonos de piel de medios a oscuros, ojos grandes, cabello grueso y oscuro.',
+    },
+    {
+      value: 'Rasgos Afrodescendientes (Negros)',
+      desc: 'Tonos de piel oscuros, cabello con textura afro (rizado o ensortijado), labios prominentes.',
+    },
+    {
+      value: 'Rasgos Latinos/Hispanos',
+      desc: 'Amplia mezcla de rasgos, tonos de piel oliváceos o bronceados, cabello oscuro ondulado o rizado.',
+    },
+    {
+      value: 'Rasgos de Oriente Medio (Árabes/Persas)',
+      desc: 'Tonos de piel medios u oliváceos, ojos expresivos, cejas definidas, cabello oscuro.',
+    },
+  ],
+  visagismo: [ // AMPLIADO
+    {
+      value: 'Rostro Ovalado (Equilibrado)',
+      desc: 'Forma ideal, frente ligeramente más ancha que la mandíbula. Permite cualquier estilo.',
+    },
+    {
+      value: 'Rostro Redondo (Suavizar con verticalidad)',
+      desc: 'Ancho y largo similares, líneas curvas. Se busca alargar con volumen superior y contouring vertical.',
+    },
+    {
+      value: 'Rostro Cuadrado (Suavizar ángulos)',
+      desc: 'Frente y mandíbula anchas y angulares. Se busca suavizar con ondas, capas y contouring en los ángulos.',
+    },
+    {
+      value: 'Rostro Alargado (Acortar visualmente)',
+      desc: 'Mucho más largo que ancho. Se busca ensanchar con volumen lateral, flequillos y contouring horizontal.',
+    },
+    {
+      value: 'Rostro Corazón (Equilibrar frente)',
+      desc: 'Frente ancha y barbilla estrecha. Se busca añadir volumen en la zona de la mandíbula (ej. media melena).',
+    },
+    {
+      value: 'Rostro Triángulo / Pera (Equilibrar mandíbula)',
+      desc: 'Mandíbula ancha y frente estrecha. Se busca añadir volumen en la parte superior y sienes.',
+    },
+  ],
+  colorimetria: [ // AMPLIADO
+    {
+      value: 'Invierno (Fría, Intensa, Oscura)',
+      desc: 'Pieles frías (subtono azulado/rosado). Favorecen colores puros e intensos (negro, blanco, azul real, fucsia). Plata.',
+    },
+    {
+      value: 'Verano (Fría, Suave, Clara)',
+      desc: 'Pieles frías. Favorecen colores suaves y empolvados (tonos pastel, grises suaves, lavanda, rosa palo). Plata.',
+    },
+    {
+      value: 'Otoño (Cálida, Suave, Oscura)',
+      desc: 'Pieles cálidas (subtono dorado/melocotón). Favorecen colores tierra (terracota, marrón, verde oliva, mostaza). Oro.',
+    },
+    {
+      value: 'Primavera (Cálida, Intensa, Clara)',
+      desc: 'Pieles cálidas. Favorecen colores vibrantes y luminosos (coral, turquesa, verde manzana, melocotón). Oro.',
+    },
+  ],
+  tipoCabello: [ // NUEVO
+    {
+      value: 'Liso (Tipo 1)',
+      desc: 'Recto desde la raíz a las puntas, tiende a ser graso, brillante. Dificultad para mantener rizos.',
+    },
+    {
+      value: 'Ondulado (Tipo 2)',
+      desc: 'Forma de "S" suave, puede tener frizz. Se define bien pero puede perder la forma con facilidad.',
+    },
+    {
+      value: 'Rizado (Tipo 3)',
+      desc: 'Rizos definidos y elásticos (bucles). Tiende a ser seco y requiere hidratación. Alto encogimiento.',
+    },
+    {
+      value: 'Afro / Muy Rizado (Tipo 4)',
+      desc: 'Patrón en "Z" o espirales muy pequeñas. Muy frágil, seco y con alto encogimiento. Requiere máxima hidratación.',
+    },
+  ],
+  tecnicaPeinado: [ // 'peinado' renombrado
+    {
+      value: 'Recogido Alto Pulido (Ej. Chignon, Moño bailarina)',
+      desc: 'Técnica de recogido formal. Requiere control total del cabello, a menudo con productos de fijación fuerte y acabado brillante.',
+    },
+    {
+      value: 'Semirecogido Bohemio (Ej. Trenzas, Twists)',
+      desc: 'Estilo más relajado. Combina secciones sueltas (a menudo onduladas) con elementos recogidos. Transmite un look romántico y natural.',
+    },
+    {
+      value: 'Cabello Suelto con Ondas de Agua (Estilo Hollywood)',
+      desc: 'Técnica de marcado muy precisa para crear ondas uniformes y glamurosas con un acabado pulido y brillante.',
+    },
+    {
+      value: 'Corte de Vanguardia (Ej. Pixie asimétrico, Bob texturizado)',
+      desc: 'Enfoque en la geometría y la textura del corte. El peinado se basa en la forma del corte, a menudo con un acabado más "editorial" o "edgy".',
+    },
+  ],
+};
+
+// --- Componente Principal de la App ---
+
+export default function App() {
+  const [currentStepIndex, setCurrentStepIndex] = useState(-1); // -1 para la pantalla de inicio
+  const [selections, setSelections] = useState({});
+  const [generatedImage, setGeneratedImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Variable para la API key (dejada en blanco según instrucciones)
+  const apiKey = ""; 
+
+  // Memoización para el paso actual
+  const currentStep = useMemo(() => {
+    return STEPS[currentStepIndex];
+  }, [currentStepIndex]);
+
+  // --- Funciones de Navegación ---
+
+  const handleStart = () => {
+    setCurrentStepIndex(0);
+    setSelections({});
+    setGeneratedImage(null);
+    setError(null);
+  };
+
+  const handleRestart = () => {
+    setCurrentStepIndex(-1); // Volver a la pantalla de inicio
+  };
+  
+  // Función: Volver al último paso para ajustar
+  const handleGoBackToQuestions = () => {
+    setGeneratedImage(null); // Limpiar imagen para volver al cuestionario
+    setError(null);
+    setCurrentStepIndex(STEPS.length - 1); // Ir al último paso
+  };
+
+  const handleNext = () => {
+    if (currentStep && !selections[currentStep.id]) {
+      console.warn('Selección requerida para continuar');
+      return;
+    }
+    
+    if (currentStepIndex < STEPS.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
+    } else {
+      // Estamos en el último paso, generar imagen
+      generateImage();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
+    }
+  };
+
+  const handleSelect = (stepId, value) => {
+    setSelections((prev) => ({
+      ...prev,
+      [stepId]: value,
+    }));
+  };
+
+  // --- Lógica de Generación de Imagen ---
+
+  /**
+   * Construye el prompt para la IA basado en las selecciones.
+   * ACTUALIZADO con los 10 pasos profesionales.
+   */
+  const buildImagePrompt = () => {
+    let basePrompt = [
+      "fotografía de retrato fotorrealista de alta calidad, primer plano (close-up shot), resolución ultra-alta (8k, 16k),",
+      "calidad profesional de belleza, iluminación de estudio (softbox, ring light), texturas de piel, cabello y maquillaje hiperrealistas,",
+      "detalles nítidos y finos, enfoque preciso en los ojos y los rasgos faciales, cámara Hasselblad, lente de 85mm, apertura f/1.4, profundidad de campo baja, grano cinematográfico sutil.",
+    ];
+
+    // 1. Género y Etnia
+    if (selections.genero && selections.etnia) {
+      basePrompt.push(`Un retrato de una persona con ${selections.genero.toLowerCase()} y ${selections.etnia.toLowerCase()}.`);
+    } else if (selections.genero) {
+      basePrompt.push(`Un retrato de una persona con ${selections.genero.toLowerCase()}.`);
+    } else if (selections.etnia) {
+      basePrompt.push(`Un retrato de una persona con ${selections.etnia.toLowerCase()}.`);
+    }
+
+    // 2. Visagismo (Actualizado)
+    if (selections.visagismo) {
+      basePrompt.push(`La morfología facial es un ${selections.visagismo.split('(')[0].trim()}.`);
+      if (selections.visagismo.includes('verticalidad')) {
+        basePrompt.push('El estilismo crea una ilusión de verticalidad para alargar el rostro.');
+      } else if (selections.visagismo.includes('Suavizar ángulos')) {
+        basePrompt.push('El estilismo usa líneas curvas y suaves para compensar los ángulos marcados.');
+      } else if (selections.visagismo.includes('Acortar visualmente')) {
+        basePrompt.push('El estilismo añade volumen lateral y flequillo para crear horizontalidad.');
+      } else if (selections.visagismo.includes('Equilibrar frente')) {
+        basePrompt.push('El estilismo añade volumen en la zona de la mandíbula.');
+      } else if (selections.visagismo.includes('Equilibrar mandíbula')) {
+        basePrompt.push('El estilismo añade volumen en la zona superior (sienes y coronilla).');
+      }
+    }
+
+    // 3. Colorimetría (Actualizado)
+    if (selections.colorimetria) {
+      basePrompt.push(`La paleta de colores del maquillaje y cabello sigue una armonía ${selections.colorimetria.split('(')[0].trim()}.`);
+    }
+
+    // 4. Tipo de Cabello (NUEVO)
+    if (selections.tipoCabello) {
+      basePrompt.push(`El cabello de la modelo tiene una textura natural ${selections.tipoCabello.split('(')[0].trim()}.`);
+    }
+    
+    // 5. Técnica de Peinado (Renombrado)
+    if (selections.tecnicaPeinado) {
+      basePrompt.push(`El peinado es un ${selections.tecnicaPeinado.split('(')[0].trim()} muy técnico y detallado, adaptado a la textura del cabello.`);
+    }
+    
+    // 6. Estilo de Maquillaje (NUEVO)
+    if (selections.estiloMaquillaje) {
+      basePrompt.push(`El estilo general del maquillaje es un ${selections.estiloMaquillaje.split('(')[0].trim()}.`);
+    }
+
+    // 7. Maquillaje Base
+    if (selections.maquillajeBase) {
+      basePrompt.push(`La piel de la modelo tiene un acabado de ${selections.maquillajeBase.split('(')[0].trim()}.`);
+    }
+
+    // 8. Maquillaje Ojos
+    if (selections.maquillajeOjos) {
+      basePrompt.push(`El maquillaje de ojos se basa en una técnica de ${selections.maquillajeOjos.split('(')[0].trim()} profesional.`);
+    }
+    
+    // 9. Maquillaje Labios
+    if (selections.maquillajeLabios) {
+      basePrompt.push(`Los labios tienen un acabado de ${selections.maquillajeLabios.split('(')[0].trim()}.`);
+    }
+
+    return basePrompt.join(' ');
+  };
+
+  /**
+   * Llama a la API de Imagen con reintentos (exponential backoff)
+   */
+  const generateImage = async () => {
+    setLoading(true);
+    setError(null);
+    setGeneratedImage(null);
+    setCurrentStepIndex(STEPS.length); // Mover a la pantalla de carga
+
+    const prompt = buildImagePrompt();
+    console.log("Generando prompt:", prompt);
+
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+    const payload = {
+      instances: [{ prompt: prompt }],
+      parameters: { sampleCount: 1 }
+    };
+
+    let retries = 3;
+    let delay = 1000;
+
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Error de API: ${response.status} - ${errorData.error?.message || response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+          const base64Data = result.predictions[0].bytesBase64Encoded;
+          setGeneratedImage(`data:image/png;base64,${base64Data}`);
+          setLoading(false);
+          return; // Éxito, salir de la función
+        } else {
+          throw new Error("Respuesta de API inesperada o vacía.");
+        }
+
+      } catch (err) {
+        if (i === retries - 1) {
+          // Último intento fallido
+          console.error(err);
+          setError(`No se pudo generar la imagen: ${err.message}`);
+          setLoading(false);
+        } else {
+          // Esperar antes de reintentar
+          await new Promise(res => setTimeout(res, delay));
+          delay *= 2; // Incrementar espera
+        }
+      }
+    }
+  };
+
+  // --- Funciones de Renderizado ---
+
+  const renderContent = () => {
+    if (currentStepIndex === -1) {
+      return <StartScreen onStart={handleStart} />;
+    }
+
+    if (loading) {
+      return <LoadingScreen />;
+    }
+
+    if (error) {
+      return <ErrorScreen error={error} onRestart={handleRestart} />;
+    }
+
+    if (generatedImage) {
+      return <ResultScreen 
+               image={generatedImage} 
+               onRestart={handleRestart} 
+               onBack={handleGoBackToQuestions}
+             />;
+    }
+
+    if (currentStep) {
+      const options = QUESTIONNAIRE_OPTIONS[currentStep.id] || [];
+      return (
+        <QuestionStep
+          step={currentStep}
+          stepIndex={currentStepIndex}
+          totalSteps={STEPS.length}
+          options={options}
+          selectedValue={selections[currentStep.id]}
+          onSelect={handleSelect}
+          onBack={handleBack}
+          onNext={handleNext}
+        />
+      );
+    }
+
+    return null;
+  };
+
+  // El layout principal (max-w-3xl, p-4 md:p-8) ya es responsive.
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-4 md:p-8 font-sans">
+      <div className="w-full max-w-3xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden">
+        <header className="bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white p-6 shadow-md">
+          <h1 className="text-2xl md:text-3xl font-bold text-center">
+            Glamour Alexia
+          </h1>
+        </header>
+        <main className="p-6 md:p-10">
+          {renderContent()}
+        </main>
+        
+      </div>
+    </div>
+  );
+}
+
+// --- Componentes de UI Auxiliares ---
+
+const StartScreen = ({ onStart }) => (
+  <div className="text-center">
+    <h2 className="text-2xl font-semibold text-gray-800 mb-4">Bienvenido/a</h2>
+    <p className="text-gray-600 mb-8">
+      Esta herramienta te guiará para crear un retrato profesional.
+    </p>
+    <button
+      onClick={onStart}
+      className="w-full bg-pink-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-pink-700 transition duration-300 ease-in-out transform hover:-translate-y-1"
+    >
+      Comenzar Cuestionario
+    </button>
+  </div>
+);
+
+const LoadingScreen = () => (
+  <div className="flex flex-col items-center justify-center h-64">
+    <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-pink-600"></div>
+    <h2 className="text-xl font-semibold text-gray-700 mt-6">Generando retrato...</h2>
+    <p className="text-gray-500 mt-2">
+      Combinando los criterios profesionales. Esto puede tardar un momento.
+    </p>
+  </div>
+);
+
+const ErrorScreen = ({ error, onRestart }) => (
+  <div className="text-center">
+    <h2 className="text-2xl font-semibold text-red-600 mb-4">Error en la Generación</h2>
+    <p className="text-gray-700 mb-6 bg-red-100 p-4 rounded-lg border border-red-300">
+      {error}
+    </p>
+    <button
+      onClick={onRestart}
+      className="w-full bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-700 transition duration-300"
+    >
+      Volver al Inicio
+    </button>
+  </div>
+);
+
+const ResultScreen = ({ image, onRestart, onBack }) => {
+  const handleDownload = () => {
+    // Abre la imagen en una nueva pestaña.
+    const newWindow = window.open();
+    newWindow.document.write(`
+      <body style="margin:0; background:#222; display:flex; justify-content:center; align-items:center; min-height:100vh;">
+        <div>
+          <img src="${image}" alt="Retrato generado" style="max-width:1100%; height:auto; box-shadow: 0 0 30px rgba(0,0,0,0.5);" />
+          <p style="color:white; text-align:center; font-family: sans-serif; margin-top: 20px;">
+            Clica con el botón derecho sobre la imagen para guardarla.
+          </p>
+        </div>
+        <title>Previsualización de Imagen</title>
+      </body>
+    `);
+    newWindow.document.close();
+  };
+
+  return (
+    <div className="text-center">
+      <h2 className="text-2xl font-semibold text-gray-800 mb-6">Resultado Profesional</h2>
+      <div className="mb-6 border-4 border-purple-200 rounded-lg shadow-inner overflow-hidden">
+        <img
+          src={image}
+          alt="Retrato profesional generado"
+          className="w-full h-auto object-cover"
+        />
+      </div>
+      {/* Esta cuadrícula es responsive: 1 col en móvil, 3 en desktop (md) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button
+          onClick={onBack}
+          className="flex-1 text-center bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-700 transition duration-300"
+        >
+          Atrás (Ajustar)
+        </button>
+        <button
+          onClick={handleDownload}
+          className="flex-1 text-center bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-green-700 transition duration-300"
+        >
+          Abrir para Guardar
+        </button>
+        <button
+          onClick={onRestart}
+          className="flex-1 bg-pink-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-pink-700 transition duration-300"
+        >
+          Nuevo Retrato
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const QuestionStep = ({ step, stepIndex, totalSteps, options, selectedValue, onSelect, onBack, onNext }) => {
+  const isLastStep = stepIndex === totalSteps - 1;
+
+  return (
+    <div>
+      <div className="mb-6">
+        <span className="block text-sm font-semibold text-pink-600 mb-1">
+          Paso {stepIndex + 1} de {totalSteps}
+        </span>
+        <h2 className="text-2xl font-bold text-gray-800">{step.title}</h2>
+      </div>
+
+      <div className="space-y-4 mb-8">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => onSelect(step.id, option.value)}
+            className={`w-full text-left p-4 border rounded-lg transition duration-200 
+              ${selectedValue === option.value
+                ? 'bg-pink-50 border-pink-500 ring-2 ring-pink-400 shadow-md'
+                : 'bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+            }`}
+          >
+            <h3 className="font-semibold text-lg text-gray-900">{option.value}</h3>
+            <p className="text-sm text-gray-600 mt-1">{option.desc}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex justify-between items-center border-t border-gray-200 pt-6">
+        <button
+          onClick={onBack}
+          disabled={stepIndex === 0}
+          className="bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg shadow hover:bg-gray-300 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Anterior
+        </button>
+        <button
+          onClick={onNext}
+          disabled={!selectedValue}
+          className={`font-bold py-2 px-6 rounded-lg shadow transition duration-300 transform hover:-translate-y-0.5
+            ${isLastStep ? 'bg-green-600 hover:bg-green-700' : 'bg-pink-600 hover:bg-pink-700'}
+            text-white
+            disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
+        >
+          {isLastStep ? 'Generar Imagen' : 'Siguiente'}
+        </button>
+      </div>
+    </div>
+  );
+};
